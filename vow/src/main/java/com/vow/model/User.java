@@ -17,21 +17,26 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
-@Table(name = "users", uniqueConstraints = { @UniqueConstraint(columnNames = { "username" }),
-		@UniqueConstraint(columnNames = { "mobileno" }) })
+@Table(name = "users", uniqueConstraints = { @UniqueConstraint(columnNames = { "mobileno" }) })
+@JsonIgnoreProperties({ "id", "password" })
 public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@NotBlank
-	@Size(min = 3, max = 50)
-	private String name;
+	private String firstName;
+
+	private String username;
 
 	@NotBlank
-	@Size(min = 3, max = 50)
-	private String username;
+	private String lastName;
+
+	@NotBlank
+	private String emailId;
 
 	@NotNull
 	private long mobileno;
@@ -40,15 +45,22 @@ public class User {
 	@Size(min = 6, max = 100)
 	private String password;
 
-	@ManyToMany(fetch = FetchType.LAZY)
-	@JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
-	private Set<Role> roles = new HashSet<>();
+	/*
+	 * @ManyToMany(fetch = FetchType.LAZY)
+	 * 
+	 * @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"),
+	 * inverseJoinColumns = @JoinColumn(name = "role_id")) private Set<Role> roles =
+	 * new HashSet<>();
+	 */
 
 	public User() {
 	}
 
-	public User(String name, String username, long mobileno, String password) {
-		this.name = name;
+	public User(String firstName, String lastName,String emailId, String username, long mobileno,
+			String password) {
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.emailId = emailId;
 		this.username = username;
 		this.mobileno = mobileno;
 		this.password = password;
@@ -62,25 +74,29 @@ public class User {
 		this.id = id;
 	}
 
-	public String getUsername() {
-		return username;
+	public String getFirstName() {
+		return firstName;
 	}
 
-	public void setUsername(String username) {
-		this.username = username;
+	public void setFirstName(String firstName) {
+		this.firstName = firstName;
 	}
 
-	public String getName() {
-		return name;
+	public String getLastName() {
+		return lastName;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
 	}
 
-	
+	public String getEmailId() {
+		return emailId;
+	}
 
-	
+	public void setEmailId(String emailId) {
+		this.emailId = emailId;
+	}
 
 	public long getMobileno() {
 		return mobileno;
@@ -98,11 +114,17 @@ public class User {
 		this.password = password;
 	}
 
-	public Set<Role> getRoles() {
-		return roles;
+	/*
+	 * public Set<Role> getRoles() { return roles; }
+	 * 
+	 * public void setRoles(Set<Role> roles) { this.roles = roles; }
+	 */
+	public String getUsername() {
+		return username;
 	}
 
-	public void setRoles(Set<Role> roles) {
-		this.roles = roles;
+	public void setUsername(String username) {
+		this.username = username;
 	}
+
 }

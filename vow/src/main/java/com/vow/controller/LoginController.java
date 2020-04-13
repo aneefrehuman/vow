@@ -1,10 +1,13 @@
 package com.vow.controller;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
+import javax.validation.UnexpectedTypeException;
 import javax.validation.Valid;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,19 +28,20 @@ import com.vow.dao.RoleRepository;
 import com.vow.dao.UserRepository;
 import com.vow.model.JwtResponse;
 import com.vow.model.LoginForm;
-import com.vow.model.Role;
-import com.vow.model.RoleName;
+import com.vow.model.ResponseVO;
 import com.vow.model.SignUpForm;
 import com.vow.model.User;
 import com.vow.security.JwtProvider;
+import com.vow.service.BaseService;
 import com.vow.util.CommonUtil;
 import com.vow.util.TwilioSMS;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
-public class LoginController {
-
+public class LoginController extends BaseService{
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+	
 	@Autowired
 	AuthenticationManager authenticationManager;
 
@@ -54,67 +58,109 @@ public class LoginController {
 	JwtProvider jwtProvider;
 
 	@PostMapping("/signin")
-	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginForm loginRequest) {
-
-		Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-
-		String jwt = jwtProvider.generateJwtToken(authentication);
-		return ResponseEntity.ok(new JwtResponse(jwt));
+	public ResponseEntity<?> login(@Valid @RequestBody LoginForm loginRequest) {
+		logger.debug("LoginController login starts");
+		ResponseVO responseVO = null;
+		Map<String,Object> responseObjectMap = new HashMap<String,Object>();
+		ResponseEntity responseEntity;
+		try {
+			Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+					String.valueOf(loginRequest.getMobileno()), String.valueOf(loginRequest.getOtp())));
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+			String jwt = jwtProvider.generateJwtToken(authentication);
+			responseObjectMap.put("Token", jwt);
+			responseVO = createServiceResponse(responseObjectMap);
+			responseEntity = new ResponseEntity(responseVO, HttpStatus.OK);
+		} catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+			responseVO = createServiceResponseError(responseObjectMap, e.getMessage());
+			responseEntity = new ResponseEntity(responseVO, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
+		logger.debug("LoginController login ends");
+		return responseEntity;
 	}
 
-	@GetMapping("/generateOtp")
-	public ResponseEntity<?> generateOtp(@Valid @RequestParam String username, @Valid @RequestParam long mobileno) {
+	@GetMapping("/validateOtp")
+	public ResponseEntity<?> validateOtp(@Valid @RequestParam long mobileno) {
+		logger.debug("LoginController validateOtp starts");
+		ResponseVO responseVO = null;
+		Map<String,Object> responseObjectMap = new HashMap<String,Object>();
+		ResponseEntity responseEntity;
 		String otp;
-
-		if (userRepository.existsByMobileno(mobileno)) {
-			otp = CommonUtil.generateOtp(6);
-			User user = userRepository.findByUsernameAndMobileno(username, mobileno);
-			user.setPassword(encoder.encode(otp));
-			userRepository.save(user);
-			TwilioSMS.SmsSend(String.valueOf(mobileno), otp);
-		} else {
-			return new ResponseEntity<String>("Fail -> Mobile number not registered!", HttpStatus.BAD_REQUEST);
+		try {
+			if (userRepository.existsByMobileno(mobileno)) {
+				otp = CommonUtil.generateOtp(6);
+				User user = userRepository.findByMobileno(mobileno);
+				user.setPassword(encoder.encode(otp));
+				userRepository.save(user);
+				TwilioSMS.SmsSend(String.valueOf(mobileno), otp);
+				responseObjectMap.put("msg", "OTP Send Succesfully");
+				responseVO = createServiceResponse(responseObjectMap);
+				responseEntity = new ResponseEntity(responseVO, HttpStatus.OK);
+			} else {
+				responseVO = createServiceResponseError(responseObjectMap, "Mobile Number Not Registered");
+				responseEntity = new ResponseEntity(responseVO, HttpStatus.BAD_REQUEST);				
+			}
+		}catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+			responseVO = createServiceResponseError(responseObjectMap, e.getMessage());
+			responseEntity = new ResponseEntity(responseVO, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-		return ResponseEntity.ok("otp send successfully");
+		
+		logger.debug("LoginController validateOtp ends");
+		return responseEntity;
 	}
 
 	@PostMapping("/signup")
 	public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpForm signUpRequest) {
-		if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-			return new ResponseEntity<String>("Fail -> Username is already taken!", HttpStatus.BAD_REQUEST);
-		}
-
-		if (userRepository.existsByMobileno(signUpRequest.getMobileno())) {
-			return new ResponseEntity<String>("Fail -> MobileNo is already in use!", HttpStatus.BAD_REQUEST);
-		}
-
-		// Creating user's account
-		User user = new User(signUpRequest.getName(), signUpRequest.getUsername(), signUpRequest.getMobileno(),
-				encoder.encode(signUpRequest.getPassword()));
-
-		Set<String> strRoles = signUpRequest.getRole();
-		Set<Role> roles = new HashSet<>();
-
-		strRoles.forEach(role -> {
-			switch (role) {
-			case "admin":
-				Role adminRole = roleRepository.findByName(RoleName.ROLE_ADMIN)
-						.orElseThrow(() -> new RuntimeException("Fail! -> Cause: User Role not find."));
-				roles.add(adminRole);
-				break;
-			default:
-				Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
-						.orElseThrow(() -> new RuntimeException("Fail! -> Cause: User Role not find."));
-				roles.add(userRole);
+		logger.debug("LoginController registerUser starts");
+		ResponseVO responseVO = null;
+		Map<String,Object> responseObjectMap = new HashMap<String,Object>();
+		ResponseEntity responseEntity;
+		try {
+			if (userRepository.existsByMobileno(signUpRequest.getMobileno())) {
+				responseVO = createServiceResponseError(responseObjectMap, "MobileNo is already in use!");
+				responseEntity = new ResponseEntity(responseVO, HttpStatus.BAD_REQUEST);	
+				return responseEntity;
 			}
-		});
 
-		user.setRoles(roles);
-		userRepository.save(user);
+			String otp = CommonUtil.generateOtp(6);
+			String username = String.valueOf(signUpRequest.getMobileno());
 
-		return ResponseEntity.ok().body(user);
+			// Creating user's account
+			User user = new User(signUpRequest.getFirstName(), signUpRequest.getLastName(), signUpRequest.getEmailId(),
+					username, signUpRequest.getMobileno(), encoder.encode(otp));
+
+			// Set<String> strRoles = signUpRequest.getRole();
+			// Set<Role> roles = new HashSet<>();
+
+			/*
+			 * strRoles.forEach(role -> { switch (role) { case "admin": Role adminRole =
+			 * roleRepository.findByName(RoleName.ROLE_ADMIN) .orElseThrow(() -> new
+			 * RuntimeException("Fail! -> Cause: User Role not find."));
+			 * roles.add(adminRole); break; default: Role userRole =
+			 * roleRepository.findByName(RoleName.ROLE_USER) .orElseThrow(() -> new
+			 * RuntimeException("Fail! -> Cause: User Role not find."));
+			 * roles.add(userRole); } });
+			 */
+
+			// user.setRoles(roles);
+			user = userRepository.save(user);
+			if (user != null) {
+				TwilioSMS.SmsSend(user.getUsername(), otp);
+			}
+			responseObjectMap.put("User",user);
+			responseVO = createServiceResponse(responseObjectMap);
+			responseEntity = new ResponseEntity(responseVO, HttpStatus.OK);
+		}	
+		catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+			responseVO = createServiceResponseError(responseObjectMap, e.getMessage());
+		responseEntity = new ResponseEntity(responseVO, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
+		logger.debug("LoginController registerUser starts");
+		return responseEntity;
 	}
 }

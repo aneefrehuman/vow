@@ -1,45 +1,27 @@
 package com.vow.model;
 
-import java.util.Set;
-
-import javax.validation.constraints.*;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 
 public class SignUpForm {
-    @NotBlank
-    @Size(min = 3, max = 50)
-    private String name;
 
-    @NotBlank
-    @Size(min = 3, max = 50)
-    private String username;
-    
-    private int otp;
+	@NotBlank
+	@Size(min = 3, max = 50)
+	private String firstName;
 
-    @NotNull
-    private long mobileno;
-    
-    private Set<String> role;
-    
-    @NotBlank
-    @Size(min = 6, max = 40)
-    private String password;
+	@NotBlank
+	@Size(min = 3, max = 50)
+	private String lastName;
 
-    public String getName() {
-        return name;
-    }
+	@Min(value=10, message="Invalid MobileNumber")  
+	private long mobileno;
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-	
+	@NotBlank
+	private String emailId;
 
 	public long getMobileno() {
 		return mobileno;
@@ -49,30 +31,28 @@ public class SignUpForm {
 		this.mobileno = mobileno;
 	}
 
-	public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-    
-    public Set<String> getRole() {
-    	return this.role;
-    }
-    
-    public void setRole(Set<String> role) {
-    	this.role = role;
-    }
-
-	public int getOtp() {
-		return otp;
+	public String getFirstName() {
+		return firstName;
 	}
 
-	public void setOtp(int otp) {
-		this.otp = otp;
+	public void setFirstName(String firstName) {
+		this.firstName = firstName;
 	}
-    
-    
-    
+
+	public String getLastName() {
+		return lastName;
+	}
+
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
+	}
+
+	public String getEmailId() {
+		return emailId;
+	}
+
+	public void setEmailId(String emailId) {
+		this.emailId = emailId;
+	}
+
 }

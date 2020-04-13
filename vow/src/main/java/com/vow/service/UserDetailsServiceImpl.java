@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vow.dao.UserRepository;
 import com.vow.model.User;
 
-
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 

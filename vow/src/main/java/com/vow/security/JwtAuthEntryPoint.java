@@ -1,5 +1,10 @@
 package com.vow.security;
-
+/*
+ * This class will extend Spring's AuthenticationEntryPoint class 
+ * and override its method commence. 
+ * It rejects every unauthenticated 
+ * request and send error code 401
+ */
 import java.io.IOException;
 
 import javax.servlet.ServletException;
